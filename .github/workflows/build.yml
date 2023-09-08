@@ -1,0 +1,50 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+      - dev
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    name: Build OpenCC Dicts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: brew install opencc
+
+      - name: Build and Pack
+        run: make && zip -r opencc-martian.zip opencc -x "*.DS_Store"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: opencc
+          path: opencc-martian.zip
+
+  release:
+    runs-on: macos-latest
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: opencc
+
+      - name: Rename Zip
+        run: mv opencc-martian.zip opencc-martian-${{ github.ref_name }}.zip
+
+      - name: Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: opencc-martian-${{ github.ref_name }}.zip
